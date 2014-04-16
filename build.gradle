@@ -1,0 +1,64 @@
+version = '1.0.0'
+defaultTasks 'clean','build'
+apply plugin: 'java'
+apply plugin: 'idea'
+sourceCompatibility = 1.5
+ext.rundeckPluginVersion= '1.1'
+
+configurations{
+    //declare custom pluginLibs configuration to include only libs for this plugin
+    pluginLibs
+
+    //declare compile to extend from pluginLibs so it inherits the dependencies
+    compile{
+        extendsFrom pluginLibs
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    pluginLibs group: 'org.apache.jclouds', name: 'jclouds-all', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds', name: 'jclouds-compute', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds', name: 'jclouds-allcompute', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.driver', name: 'jclouds-slf4j', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.driver', name: 'jclouds-sshj', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.api', name: 'openstack-nova', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.api', name: 'swift', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.api', name: 'openstack-cinder', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.api', name: 'openstack-keystone', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.api', name: 'openstack-trove', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.labs', name: 'openstack-marconi', version: '1.7.1'
+    pluginLibs group: 'org.apache.jclouds.labs', name: 'openstack-neutron', version: '1.7.1'
+
+    compile( [group: 'org.rundeck', name: 'rundeck-core', version: '2.0.3', ext:'jar'])
+    testCompile(
+        //[group: 'junit', name: 'junit', version: '3.8.1',ext:'jar']
+    )
+}
+// task to copy plugin libs to output/lib dir
+task copyToLib(type: Copy) {
+    into "$buildDir/output/lib"
+    from configurations.pluginLibs
+}
+ext.pluginClassNames='org.rundeck.plugin.openstack.CreateInstanceStep'
+jar {
+    //include contents of output dir
+    from "$buildDir/output"
+    manifest {
+        attributes 'Rundeck-Plugin-File-Version': version
+        attributes 'Rundeck-Plugin-Version': rundeckPluginVersion, 'Rundeck-Plugin-Archive': 'true'
+        def libList = configurations.pluginLibs.collect{'lib/'+it.name}.join(' ')
+        attributes 'Rundeck-Plugin-Classnames': 'org.rundeck.plugin.openstack.CreateInstanceStep', 'Rundeck-Plugin-Libs': "${libList}"
+        attributes 'Main-Class': 'org.rundeck.plugin.openstack.CreateInstanceStep'
+    }
+}
+//set jar task to depend on copyToLib
+jar.dependsOn(copyToLib)
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.8'
+}
